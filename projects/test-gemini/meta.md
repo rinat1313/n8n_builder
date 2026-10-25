@@ -2,7 +2,6 @@
 
 - slug: `test-gemini`
 - title: Тест gemini
-- phase: clarification
-- round: 1
-- restarted: 2026-10-25T11:53:37Z
-- note: процесс запущен заново с фазы приёма ТЗ / уточнения
+- phase: done
+- config: `configs/test-gemini/telegram-gemini-flash.json`
+- completed: 2026-10-25T12:00:00Z

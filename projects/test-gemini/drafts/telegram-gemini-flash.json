@@ -1,0 +1,326 @@
+{
+  "name": "test-gemini — Telegram ↔ Gemini 3.1 Flash",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Тест gemini\n1. Привяжи **Telegram Bot** credential к Trigger и Send.\n2. Создай credential **Query Auth**: имя параметра `key`, значение = API key из AI Studio; привяжи к HTTP Request.\n3. В **Set Config** замени `CHANGE_ME_CHAT_ID` на свой Telegram chat id (напиши боту @userinfobot).\n4. Модель по умолчанию: `gemini-3.1-flash` — при ошибке 404 поменяй id в Set Config.\n5. История и логи — в static data этого workflow.",
+        "height": 460,
+        "width": 420,
+        "color": 5
+      },
+      "id": "98761e02-975e-4a9e-8134-dc2b9984d37f",
+      "name": "Инструкция",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -480,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "id": "31a3abbc-ed27-409f-8aab-1fc66494a478",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        200
+      ],
+      "webhookId": "12de378e-b712-4522-b9ff-448fb59ff23d",
+      "credentials": {
+        "telegramApi": {
+          "id": "CHANGE_ME_TELEGRAM_CRED",
+          "name": "Telegram Bot (add token)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e0496f32-4506-4980-b802-7aacf8f12031",
+              "name": "allowedChatId",
+              "value": "CHANGE_ME_CHAT_ID",
+              "type": "string"
+            },
+            {
+              "id": "afa3b994-76bb-4627-8e7a-78aaef7adeeb",
+              "name": "model",
+              "value": "gemini-3.1-flash",
+              "type": "string"
+            },
+            {
+              "id": "fba5522d-6f51-4326-afa1-4446d88ce14c",
+              "name": "chunkSize",
+              "value": 4000,
+              "type": "number"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "e4f753c7-0187-4edd-9e64-8f1d2798e2a7",
+      "name": "Set Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        260,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "5b2fc4ff-12da-469c-9ce8-13c563527959",
+              "leftValue": "={{ $json.message.text }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "4a26f860-52f4-4434-a4e4-316c55b352a0",
+      "name": "IF Has Text",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        520,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "16c52500-bd8c-465b-aab9-dec2c45272cd",
+              "leftValue": "={{ String($json.message.chat.id) }}",
+              "rightValue": "={{ String($json.allowedChatId) }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "3f672789-622b-4f0d-a695-fc38abcbbfa2",
+      "name": "IF Owner",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        780,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const msg = $json.message;\nconst chatId = String(msg.chat.id);\nconst userText = String(msg.text);\nconst model = String($json.model || 'gemini-3.1-flash');\nconst chunkSize = Number($json.chunkSize) || 4000;\n\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.histories) staticData.histories = {};\nif (!staticData.logs) staticData.logs = [];\n\nconst history = Array.isArray(staticData.histories[chatId])\n  ? staticData.histories[chatId]\n  : [];\n\nconst contents = history.concat([\n  { role: 'user', parts: [{ text: userText }] },\n]);\n\nreturn [{\n  json: {\n    chatId,\n    userText,\n    model,\n    chunkSize,\n    requestBody: { contents },\n  },\n}];"
+      },
+      "id": "3a84afd9-25ee-4f4a-aeaa-3a95dc833c70",
+      "name": "Code Prepare",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://generativelanguage.googleapis.com/v1beta/models/{{ $json.model }}:generateContent",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.requestBody }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "ca91bd50-cedf-40e9-84b7-7b1cdb64ffa6",
+      "name": "HTTP Gemini",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1300,
+        200
+      ],
+      "credentials": {
+        "httpQueryAuth": {
+          "id": "CHANGE_ME_GEMINI_CRED",
+          "name": "Google AI Studio key (query: key)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const prep = $('Code Prepare').first().json;\nconst response = $input.first().json;\n\nif (response.error || response.error?.message) {\n  const staticData = $getWorkflowStaticData('global');\n  if (!staticData.logs) staticData.logs = [];\n  staticData.logs.push({\n    ts: new Date().toISOString(),\n    chatId: prep.chatId,\n    user: prep.userText,\n    error: response.error || response,\n  });\n  if (staticData.logs.length > 500) staticData.logs = staticData.logs.slice(-500);\n  return [];\n}\n\nconst parts = response?.candidates?.[0]?.content?.parts || [];\nconst assistantText = parts.map((p) => (p && p.text) || '').join('');\n\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.histories) staticData.histories = {};\nif (!staticData.logs) staticData.logs = [];\n\nlet history = Array.isArray(staticData.histories[prep.chatId])\n  ? staticData.histories[prep.chatId]\n  : [];\nhistory = history.concat([\n  { role: 'user', parts: [{ text: prep.userText }] },\n  { role: 'model', parts: [{ text: assistantText }] },\n]);\nif (history.length > 40) history = history.slice(-40);\nstaticData.histories[prep.chatId] = history;\n\nstaticData.logs.push({\n  ts: new Date().toISOString(),\n  chatId: prep.chatId,\n  user: prep.userText,\n  assistant: assistantText,\n});\nif (staticData.logs.length > 500) staticData.logs = staticData.logs.slice(-500);\n\nfunction chunkText(text, size) {\n  if (!text) return [];\n  const chunks = [];\n  let i = 0;\n  while (i < text.length) {\n    let end = Math.min(i + size, text.length);\n    if (end < text.length) {\n      const slice = text.slice(i, end);\n      const nl = slice.lastIndexOf('\\n');\n      if (nl > size * 0.5) end = i + nl + 1;\n    }\n    chunks.push(text.slice(i, end));\n    i = end;\n  }\n  return chunks;\n}\n\nconst chunks = chunkText(assistantText, prep.chunkSize);\nreturn chunks.map((text) => ({ json: { chatId: prep.chatId, text } }));"
+      },
+      "id": "981df4ba-e38d-4f0f-9be8-097e59501d75",
+      "name": "Code Postprocess",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1560,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "06e18252-bc57-41c2-a1c9-805b51e91f4f",
+      "name": "Telegram Send",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1820,
+        200
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "CHANGE_ME_TELEGRAM_CRED",
+          "name": "Telegram Bot (add token)"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Set Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Config": {
+      "main": [
+        [
+          {
+            "node": "IF Has Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Has Text": {
+      "main": [
+        [
+          {
+            "node": "IF Owner",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "IF Owner": {
+      "main": [
+        [
+          {
+            "node": "Code Prepare",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Code Prepare": {
+      "main": [
+        [
+          {
+            "node": "HTTP Gemini",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Gemini": {
+      "main": [
+        [
+          {
+            "node": "Code Postprocess",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code Postprocess": {
+      "main": [
+        [
+          {
+            "node": "Telegram Send",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "df4a71c9-6ea0-43e9-a9a7-7580c17359a3",
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "instanceId": "test-gemini-export"
+  },
+  "id": "160454b9-3946-4833-97f0-4cd5df637d6b",
+  "tags": [
+    {
+      "name": "test-gemini"
+    }
+  ]
+}
