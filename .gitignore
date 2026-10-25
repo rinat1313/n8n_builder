@@ -1,0 +1,8 @@
+n8n_builder/node_modules/
+n8n_builder/.agent-serve/
+n8n_builder/memory/
+n8n_builder/.env
+n8n_builder/.env.local
+node_modules/
+.env
+.env.local
