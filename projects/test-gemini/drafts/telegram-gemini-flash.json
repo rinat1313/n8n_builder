@@ -3,9 +3,9 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## Тест gemini\n1. Привяжи **Telegram Bot** credential к Trigger и Send.\n2. Создай credential **Query Auth**: имя параметра `key`, значение = API key из AI Studio; привяжи к HTTP Request.\n3. В **Set Config** замени `CHANGE_ME_CHAT_ID` на свой Telegram chat id (напиши боту @userinfobot).\n4. Модель по умолчанию: `gemini-3.1-flash` — при ошибке 404 поменяй id в Set Config.\n5. История и логи — в static data этого workflow.",
-        "height": 460,
-        "width": 420,
+        "content": "## Тест gemini\n1. Привяжи **Telegram Bot** credential к Trigger и Send.\n2. Credential **Query Auth**: параметр `key` = API key AI Studio → HTTP Gemini.\n3. Set Config: `CHANGE_ME_CHAT_ID` → свой chat id.\n4. Модель: `gemini-3.1-flash` (при 404 смени id).\n5. **Важно:** Telegram Trigger шлёт webhook только на **HTTPS**. Ошибка `An HTTPS URL must be provided for webhook` = у n8n URL вида http://… или localhost. Задай `WEBHOOK_URL=https://твой-домен/` (или туннель Cloudflare/ngrok) и перезапусти n8n, затем заново Activate workflow.",
+        "height": 560,
+        "width": 460,
         "color": 5
       },
       "id": "98761e02-975e-4a9e-8134-dc2b9984d37f",
